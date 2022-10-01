@@ -36,20 +36,22 @@ router.post("/signup", async (req, res, next) => {
 
     const checkUser = await User.findOne({ username });
 
-    if (checkUser) {
+    if (checkUser !== null) {
       return res.status(400).json({ errorMessage: "Username already taken." });
     }
 
-    const generatedSalt = await genSalt(saltRounds);
+    const generatedSalt = await bcrypt.genSalt(saltRounds);
 
     const hashedPassword = await bcrypt.hash(password, generatedSalt);
 
     const newUser = await User.create({ username, password: hashedPassword });
 
-    res.status(200).json({ newUser });
+    console.log(newUser);
+
+    return res.status(200).json({ newUser });
   } catch (error) {
-    if (error instanceof mongoose.Error.Validationerror) {
-      return res.status(400).json({ errroMessage: error.message });
+    if (error instanceof mongoose.Error.ValidationError) {
+      return res.status(400).json({ errorMessage: error.message });
     }
     if (error.code === 11000) {
       return res.status(400).json({
