@@ -4,7 +4,7 @@ const userSchema = new Schema(
   {
     username: {
       type: String,
-      unique: true,
+      unique: [true, "Username already taken!"],
       trim: true,
     },
     password: String,

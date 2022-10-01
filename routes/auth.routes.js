@@ -3,8 +3,9 @@ const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
 const saltRounds = 10;
 const User = require("../models/User.model");
+const { isAuthenticated } = require("../middleware/jwt.middleware");
 
-router.get("/verify", (req, res, _next) => {
+router.get("/verify", isAuthenticated, (req, res, _next) => {
   res.json(req.payload);
 });
 
@@ -58,3 +59,57 @@ router.post("/signup", async (req, res, next) => {
     }
   }
 });
+
+router.post("/login", async (req, res, next) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username) {
+      return res
+        .status(400)
+        .json({ errorMessage: "Please provide a Username" });
+    }
+
+    if (!password) {
+      return res
+        .status(400)
+        .json({ errorMessage: "Please provide a password" });
+    }
+
+    if (!username && !password) {
+      return res.status(400).json({
+        errorMessage: "Please provide both your username and password",
+      });
+    }
+
+    const userToFind = await User.findOne({ username });
+
+    if (!userToFind) {
+      return res
+        .status(400)
+        .json({ errorMessage: "No user matches that username" });
+    }
+
+    const comparePassword = bcrypt.compareSync(password, userToFind.password);
+
+    if (!comparePassword) {
+      return res.status(400).json({ errorMessage: "Incorrect password" });
+    }
+
+    const payload = {
+      _id: userToFind._id,
+      username: userToFind.username,
+    };
+
+    const authToken = jwt.sign(payload, process.env.TOKEN_SECRET, {
+      algorithm: "HS256",
+      expiresIn: "24h",
+    });
+
+    res.status(200).json({ authToken });
+  } catch (error) {
+    next(error);
+  }
+});
+
+module.exports = router;
